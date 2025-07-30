@@ -27,6 +27,19 @@ class _NewEntryPageState extends State<NewEntryPage>
       vsync: this,
       duration: const Duration(milliseconds: 300),
     );
+
+    // Set current user in EntryBloc when page initializes
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _setCurrentUserInEntryBloc();
+    });
+  }
+
+  /// Set the current authenticated user in EntryBloc
+  void _setCurrentUserInEntryBloc() {
+    final authState = context.read<AuthBloc>().state;
+    if (authState is AuthAuthenticated) {
+      context.read<EntryBloc>().setCurrentUser(authState.user.id);
+    }
   }
 
   @override
@@ -235,6 +248,9 @@ class _NewEntryPageState extends State<NewEntryPage>
       );
       return;
     }
+
+    // Ensure current user is set in EntryBloc
+    context.read<EntryBloc>().setCurrentUser(authState.user.id);
 
     // Play send animation
     await _iconAnimationController.forward();

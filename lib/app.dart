@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'features/auth/bloc/auth_bloc.dart';
+import 'features/auth/bloc/auth_state.dart';
+import 'features/review/bloc/entry_bloc.dart';
 import 'features/new_entry/view/new_entry_page.dart';
 import 'features/review/view/review_entries_page.dart';
 import 'features/settings/view/settings_page.dart';
@@ -47,30 +51,38 @@ class _AppState extends State<App> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: _pages[_selectedIndex],
-      bottomNavigationBar: NavigationBar(
-        onDestinationSelected: (int index) {
-          setState(() {
-            _selectedIndex = index;
-          });
-        },
-        indicatorColor: Colors.blueAccent,
-        selectedIndex: _selectedIndex,
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.edit_note_outlined),
-            label: 'New Entry',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.list_alt_outlined),
-            label: 'Review',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.settings_outlined),
-            label: 'Settings',
-          ),
-        ],
+    return BlocListener<AuthBloc, AuthState>(
+      listener: (context, state) {
+        // Set current user in EntryBloc when authentication state changes
+        if (state is AuthAuthenticated) {
+          context.read<EntryBloc>().setCurrentUser(state.user.id);
+        }
+      },
+      child: Scaffold(
+        body: _pages[_selectedIndex],
+        bottomNavigationBar: NavigationBar(
+          onDestinationSelected: (int index) {
+            setState(() {
+              _selectedIndex = index;
+            });
+          },
+          indicatorColor: Colors.blueAccent,
+          selectedIndex: _selectedIndex,
+          destinations: const [
+            NavigationDestination(
+              icon: Icon(Icons.edit_note_outlined),
+              label: 'New Entry',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.list_alt_outlined),
+              label: 'Review',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.settings_outlined),
+              label: 'Settings',
+            ),
+          ],
+        ),
       ),
     );
   }

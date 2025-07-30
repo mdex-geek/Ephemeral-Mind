@@ -21,12 +21,15 @@ class _ProfilePageState extends State<ProfilePage> {
   final _currentPasswordController = TextEditingController();
   final _newPasswordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  
+
   bool _obscureCurrentPassword = true;
   bool _obscureNewPassword = true;
   bool _obscureConfirmPassword = true;
   String? _selectedImagePath;
   final ImagePicker _picker = ImagePicker();
+
+  // Keep track of current user to handle loading states properly
+  User? _currentUser;
 
   @override
   void initState() {
@@ -43,20 +46,24 @@ class _ProfilePageState extends State<ProfilePage> {
     super.dispose();
   }
 
-  /// Load current user data into form fields
-  void _loadUserData() {
-    // Use a post-frame callback to ensure the widget is fully built
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        final authState = context.read<AuthBloc>().state;
-        if (authState is AuthAuthenticated) {
-          setState(() {
-            _usernameController.text = authState.user.username;
-            _selectedImagePath = authState.user.profileImagePath;
-          });
-        }
-      }
-    });
+  /// Get the current user for loading states
+  User _getCurrentUserForDisplay() {
+    // Return the stored current user if available, otherwise try to get from AuthBloc
+    if (_currentUser != null) {
+      return _currentUser!;
+    }
+
+    final authState = context.read<AuthBloc>().state;
+    if (authState is AuthAuthenticated) {
+      _currentUser = authState.user;
+      return authState.user;
+    } else if (authState is ProfileUpdated) {
+      _currentUser = authState.user;
+      return authState.user;
+    }
+
+    // Fallback - this shouldn't happen if the widget is properly managed
+    throw Exception('No user available');
   }
 
   @override
@@ -79,6 +86,7 @@ class _ProfilePageState extends State<ProfilePage> {
               SnackBar(
                 content: Text(state.message),
                 backgroundColor: Colors.red,
+                duration: const Duration(seconds: 4),
               ),
             );
           } else if (state is ProfileUpdated) {
@@ -86,12 +94,28 @@ class _ProfilePageState extends State<ProfilePage> {
               const SnackBar(
                 content: Text('Profile updated successfully!'),
                 backgroundColor: Colors.green,
+                duration: const Duration(seconds: 3),
               ),
             );
-            _loadUserData(); // Reload user data
+            // Clear password fields after successful update
+            _currentPasswordController.clear();
+            _newPasswordController.clear();
+            _confirmPasswordController.clear();
+
+            // Update the stored user reference
+            _currentUser = state.user;
           } else if (state is AuthUnauthenticated) {
-            // Navigate back to login page
-            Navigator.of(context).pushReplacementNamed('/login');
+            // AuthWrapper will handle the redirect to login page
+            // No need to navigate manually - just show a success message for account deletion
+            if (_currentUser != null) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Account deleted successfully'),
+                  backgroundColor: Colors.green,
+                  duration: const Duration(seconds: 2),
+                ),
+              );
+            }
           }
         },
         child: BlocBuilder<AuthBloc, AuthState>(
@@ -100,6 +124,25 @@ class _ProfilePageState extends State<ProfilePage> {
               // Load user data when we have an authenticated state
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 if (mounted && _usernameController.text.isEmpty) {
+                  _usernameController.text = state.user.username;
+                  _selectedImagePath = state.user.profileImagePath;
+                  _currentUser = state.user; // Keep track of current user
+                }
+              });
+              return _buildProfileForm(state.user);
+            } else if (state is ProfileUpdating) {
+              // During profile update, show the form with current user data
+              // The individual widgets will handle their own loading states
+              try {
+                return _buildProfileForm(_getCurrentUserForDisplay());
+              } catch (e) {
+                return const Center(child: CircularProgressIndicator());
+              }
+            } else if (state is ProfileUpdated) {
+              // Show the form with updated user data
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) {
+                  _currentUser = state.user; // Update stored user
                   _usernameController.text = state.user.username;
                   _selectedImagePath = state.user.profileImagePath;
                 }
@@ -124,24 +167,24 @@ class _ProfilePageState extends State<ProfilePage> {
           children: [
             // Profile Image Section
             _buildProfileImageSection(user),
-            
+
             const SizedBox(height: 32),
-            
+
             // Username Section
             _buildUsernameSection(),
-            
+
             const SizedBox(height: 24),
-            
+
             // Password Change Section
             _buildPasswordSection(),
-            
+
             const SizedBox(height: 32),
-            
+
             // Update Button
             _buildUpdateButton(),
-            
+
             const SizedBox(height: 24),
-            
+
             // Delete Account Section
             _buildDeleteAccountSection(),
           ],
@@ -178,20 +221,20 @@ class _ProfilePageState extends State<ProfilePage> {
                         },
                       )
                     : user.profileImagePath != null
-                        ? Image.file(
-                            File(user.profileImagePath!),
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return _buildDefaultAvatar(user);
-                            },
-                          )
-                        : _buildDefaultAvatar(user),
+                    ? Image.file(
+                        File(user.profileImagePath!),
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return _buildDefaultAvatar(user);
+                        },
+                      )
+                    : _buildDefaultAvatar(user),
               ),
             ),
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           // Change Image Button
           TextButton.icon(
             onPressed: _pickImage,
@@ -227,9 +270,9 @@ class _ProfilePageState extends State<ProfilePage> {
       children: [
         Text(
           'Username',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
         TextFormField(
@@ -237,9 +280,7 @@ class _ProfilePageState extends State<ProfilePage> {
           decoration: InputDecoration(
             labelText: 'Username',
             prefixIcon: const Icon(Icons.person_outline),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
           ),
           validator: (value) {
             if (value == null || value.trim().isEmpty) {
@@ -262,9 +303,9 @@ class _ProfilePageState extends State<ProfilePage> {
       children: [
         Text(
           'Change Password',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
         Text(
@@ -274,7 +315,7 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Current Password
         TextFormField(
           controller: _currentPasswordController,
@@ -284,7 +325,9 @@ class _ProfilePageState extends State<ProfilePage> {
             prefixIcon: const Icon(Icons.lock_outline),
             suffixIcon: IconButton(
               icon: Icon(
-                _obscureCurrentPassword ? Icons.visibility : Icons.visibility_off,
+                _obscureCurrentPassword
+                    ? Icons.visibility
+                    : Icons.visibility_off,
               ),
               onPressed: () {
                 setState(() {
@@ -292,14 +335,12 @@ class _ProfilePageState extends State<ProfilePage> {
                 });
               },
             ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
           ),
         ),
-        
+
         const SizedBox(height: 16),
-        
+
         // New Password
         TextFormField(
           controller: _newPasswordController,
@@ -317,9 +358,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 });
               },
             ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
           ),
           validator: (value) {
             if (value != null && value.isNotEmpty) {
@@ -334,9 +373,9 @@ class _ProfilePageState extends State<ProfilePage> {
             return null;
           },
         ),
-        
+
         const SizedBox(height: 16),
-        
+
         // Confirm New Password
         TextFormField(
           controller: _confirmPasswordController,
@@ -346,7 +385,9 @@ class _ProfilePageState extends State<ProfilePage> {
             prefixIcon: const Icon(Icons.lock_outline),
             suffixIcon: IconButton(
               icon: Icon(
-                _obscureConfirmPassword ? Icons.visibility : Icons.visibility_off,
+                _obscureConfirmPassword
+                    ? Icons.visibility
+                    : Icons.visibility_off,
               ),
               onPressed: () {
                 setState(() {
@@ -354,9 +395,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 });
               },
             ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
           ),
           validator: (value) {
             if (_newPasswordController.text.isNotEmpty) {
@@ -379,7 +418,7 @@ class _ProfilePageState extends State<ProfilePage> {
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, state) {
         final isUpdating = state is ProfileUpdating;
-        
+
         return SizedBox(
           width: double.infinity,
           height: 50,
@@ -403,10 +442,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   )
                 : const Text(
                     'Update Profile',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
           ),
         );
@@ -436,26 +472,41 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
         ),
         const SizedBox(height: 16),
-        SizedBox(
-          width: double.infinity,
-          height: 50,
-          child: OutlinedButton(
-            onPressed: _handleDeleteAccount,
-            style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.red,
-              side: const BorderSide(color: Colors.red),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+        BlocBuilder<AuthBloc, AuthState>(
+          builder: (context, state) {
+            final isDeleting = state is AuthLoading;
+
+            return SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: OutlinedButton(
+                onPressed: isDeleting ? null : _handleDeleteAccount,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.red,
+                  side: const BorderSide(color: Colors.red),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: isDeleting
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.red),
+                        ),
+                      )
+                    : const Text(
+                        'Delete Account',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
               ),
-            ),
-            child: const Text(
-              'Delete Account',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
+            );
+          },
         ),
       ],
     );
@@ -469,7 +520,7 @@ class _ProfilePageState extends State<ProfilePage> {
       maxHeight: 512,
       imageQuality: 80,
     );
-    
+
     if (image != null) {
       setState(() {
         _selectedImagePath = image.path;
@@ -478,14 +529,45 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   /// Handle profile update
+  /// Handle profile update with improved validation
   void _handleUpdateProfile() {
     if (_formKey.currentState!.validate()) {
+      final newUsername = _usernameController.text.trim();
+      final newPassword = _newPasswordController.text.isNotEmpty
+          ? _newPasswordController.text
+          : null;
+
+      // Ensure we have a valid username
+      if (newUsername.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Username cannot be empty'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      // If password is being changed, ensure current password is provided
+      if (newPassword != null && _currentPasswordController.text.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Please enter your current password to change your password',
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
       context.read<AuthBloc>().add(
         UpdateProfile(
-          newUsername: _usernameController.text.trim(),
-          newPassword: _newPasswordController.text.isNotEmpty
-              ? _newPasswordController.text
+          newUsername: newUsername,
+          currentPassword: _currentPasswordController.text.isNotEmpty
+              ? _currentPasswordController.text
               : null,
+          newPassword: newPassword,
           newProfileImagePath: _selectedImagePath,
         ),
       );
@@ -542,4 +624,4 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
     );
   }
-} 
+}
