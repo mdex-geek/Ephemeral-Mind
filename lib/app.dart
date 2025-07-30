@@ -25,7 +25,7 @@ class _AppState extends State<App> {
   void initState() {
     super.initState();
     _pages = [
-      NewEntryPage(),
+      const NewEntryPage(),
       const ReviewEntriesPage(),
       SettingsPage(
         onThemeModeChanged: widget.onThemeModeChanged,
@@ -50,7 +50,6 @@ class _AppState extends State<App> {
     return Scaffold(
       body: _pages[_selectedIndex],
       bottomNavigationBar: NavigationBar(
-        animationDuration: Duration(milliseconds: 100),
         onDestinationSelected: (int index) {
           setState(() {
             _selectedIndex = index;
