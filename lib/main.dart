@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'core/theme/app_theme.dart';
 import 'l10n/l10n.dart';
 import 'l10n/app_localizations.dart';
+import 'features/auth/bloc/auth_bloc.dart';
+import 'features/auth/bloc/auth_event.dart';
+import 'features/auth/services/auth_service.dart';
+import 'features/review/bloc/entry_bloc.dart';
 import 'app.dart';
 
 void main() {
@@ -44,24 +49,35 @@ class _MainAppState extends State<MainApp> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Shitpost',
-      theme: AppTheme.light,
-      darkTheme: AppTheme.dark,
-      themeMode: _themeMode,
-      localizationsDelegates: const [
-        AppLocalizationsDelegate(),
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider<AuthBloc>(
+          create: (context) =>
+              AuthBloc(authService: AuthService())
+                ..add(const CheckAuthStatus()),
+        ),
+        BlocProvider<EntryBloc>(create: (context) => EntryBloc()),
       ],
-      supportedLocales: L10n.all,
-      onGenerateTitle: (context) => AppLocalizations.of(context)?.appTitle ?? 'Shitpost',
-      home: SafeArea(
-        child: App(
-          onThemeModeChanged: _updateThemeMode,
-          currentThemeMode: _themeMode,
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        title: 'Shitpost',
+        theme: AppTheme.light,
+        darkTheme: AppTheme.dark,
+        themeMode: _themeMode,
+        localizationsDelegates: const [
+          AppLocalizationsDelegate(),
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: L10n.all,
+        onGenerateTitle: (context) =>
+            AppLocalizations.of(context)?.appTitle ?? 'Shitpost',
+        home: SafeArea(
+          child: App(
+            onThemeModeChanged: _updateThemeMode,
+            currentThemeMode: _themeMode,
+          ),
         ),
       ),
     );
