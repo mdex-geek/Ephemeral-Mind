@@ -1,4 +1,3 @@
-
 /// Base class for all authentication-related events
 abstract class AuthEvent {
   const AuthEvent();
@@ -9,10 +8,7 @@ class RegisterUser extends AuthEvent {
   final String username;
   final String password;
 
-  const RegisterUser({
-    required this.username,
-    required this.password,
-  });
+  const RegisterUser({required this.username, required this.password});
 }
 
 /// Event to login user
@@ -20,10 +16,7 @@ class LoginUser extends AuthEvent {
   final String username;
   final String password;
 
-  const LoginUser({
-    required this.username,
-    required this.password,
-  });
+  const LoginUser({required this.username, required this.password});
 }
 
 /// Event to logout user
@@ -39,11 +32,13 @@ class CheckAuthStatus extends AuthEvent {
 /// Event to update user profile
 class UpdateProfile extends AuthEvent {
   final String? newUsername;
+  final String? currentPassword;
   final String? newPassword;
   final String? newProfileImagePath;
 
   const UpdateProfile({
     this.newUsername,
+    this.currentPassword,
     this.newPassword,
     this.newProfileImagePath,
   });
@@ -52,4 +47,4 @@ class UpdateProfile extends AuthEvent {
 /// Event to delete user account
 class DeleteAccount extends AuthEvent {
   const DeleteAccount();
-} 
+}

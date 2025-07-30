@@ -9,7 +9,7 @@ import 'features/auth/bloc/auth_bloc.dart';
 import 'features/auth/bloc/auth_event.dart';
 import 'features/auth/services/auth_service.dart';
 import 'features/review/bloc/entry_bloc.dart';
-import 'app.dart';
+import 'auth_wrapper.dart';
 
 void main() {
   runApp(const MainApp());
@@ -60,7 +60,7 @@ class _MainAppState extends State<MainApp> {
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
-        title: 'Shitpost',
+        title: 'Ephemeral Mind',
         theme: AppTheme.light,
         darkTheme: AppTheme.dark,
         themeMode: _themeMode,
@@ -74,7 +74,7 @@ class _MainAppState extends State<MainApp> {
         onGenerateTitle: (context) =>
             AppLocalizations.of(context)?.appTitle ?? 'Shitpost',
         home: SafeArea(
-          child: App(
+          child: AuthWrapper(
             onThemeModeChanged: _updateThemeMode,
             currentThemeMode: _themeMode,
           ),

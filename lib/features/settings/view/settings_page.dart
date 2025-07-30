@@ -9,9 +9,9 @@ import '../widget/themeOption.dart';
 class SettingsPage extends StatefulWidget {
   final Function(ThemeMode) onThemeModeChanged;
   final ThemeMode currentThemeMode;
-  
+
   const SettingsPage({
-    super.key, 
+    super.key,
     required this.onThemeModeChanged,
     required this.currentThemeMode,
   });
@@ -47,6 +47,7 @@ class _SettingsPageState extends State<SettingsPage> {
           if (state is AuthAuthenticated) {
             return _buildSettingsContent(state.user);
           }
+          // This should never happen as AuthWrapper handles unauthenticated users
           return const Center(child: CircularProgressIndicator());
         },
       ),
@@ -60,14 +61,14 @@ class _SettingsPageState extends State<SettingsPage> {
       children: [
         // User Profile Section
         _buildUserProfileSection(user),
-        
+
         const SizedBox(height: 24),
-        
+
         // General Preferences Section
         _buildGeneralPreferencesSection(),
-        
+
         const SizedBox(height: 24),
-        
+
         // Account Section
         _buildAccountSection(),
       ],
@@ -81,15 +82,17 @@ class _SettingsPageState extends State<SettingsPage> {
       children: [
         Text(
           'Profile',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 12),
         Card(
           child: ListTile(
             leading: CircleAvatar(
-              backgroundColor: Theme.of(context).colorScheme.primary.withAlpha((0.1 * 255).toInt()),
+              backgroundColor: Theme.of(
+                context,
+              ).colorScheme.primary.withAlpha((0.1 * 255).toInt()),
               child: Text(
                 user.initialLetter,
                 style: TextStyle(
@@ -123,9 +126,9 @@ class _SettingsPageState extends State<SettingsPage> {
       children: [
         Text(
           'General Preferences',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 12),
         Card(
@@ -134,7 +137,10 @@ class _SettingsPageState extends State<SettingsPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('App Theme', style: TextStyle(fontWeight: FontWeight.bold)),
+                const Text(
+                  'App Theme',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
                 const SizedBox(height: 12),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -182,9 +188,9 @@ class _SettingsPageState extends State<SettingsPage> {
       children: [
         Text(
           'Account',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 12),
         Card(
@@ -206,7 +212,10 @@ class _SettingsPageState extends State<SettingsPage> {
               // const Divider(height: 1),
               ListTile(
                 leading: const Icon(Icons.logout, color: Colors.red),
-                title: const Text('Logout', style: TextStyle(color: Colors.red)),
+                title: const Text(
+                  'Logout',
+                  style: TextStyle(color: Colors.red),
+                ),
                 subtitle: const Text('Sign out from your account.'),
                 onTap: _handleLogout,
               ),
@@ -245,7 +254,7 @@ class _SettingsPageState extends State<SettingsPage> {
   String _formatDate(DateTime date) {
     final now = DateTime.now();
     final difference = now.difference(date);
-    
+
     if (difference.inDays > 365) {
       final years = (difference.inDays / 365).floor();
       return '$years year${years == 1 ? '' : 's'} ago';
@@ -258,4 +267,4 @@ class _SettingsPageState extends State<SettingsPage> {
       return 'Today';
     }
   }
-} 
+}

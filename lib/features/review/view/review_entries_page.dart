@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../auth/bloc/auth_bloc.dart';
+import '../../auth/bloc/auth_state.dart';
 import '../bloc/entry_bloc.dart';
 import '../bloc/entry_event.dart';
 import '../bloc/entry_state.dart';
@@ -17,10 +19,19 @@ class _ReviewEntriesPageState extends State<ReviewEntriesPage> {
   @override
   void initState() {
     super.initState();
-    // Load entries when the page is initialized
+    // Set current user and load entries when the page is initialized
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      _setCurrentUserInEntryBloc();
       context.read<EntryBloc>().add(const LoadEntries());
     });
+  }
+
+  /// Set the current authenticated user in EntryBloc
+  void _setCurrentUserInEntryBloc() {
+    final authState = context.read<AuthBloc>().state;
+    if (authState is AuthAuthenticated) {
+      context.read<EntryBloc>().setCurrentUser(authState.user.id);
+    }
   }
 
   @override
@@ -33,6 +44,7 @@ class _ReviewEntriesPageState extends State<ReviewEntriesPage> {
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () {
+              _setCurrentUserInEntryBloc();
               context.read<EntryBloc>().add(const LoadEntries());
             },
             tooltip: 'Refresh entries',
